@@ -1,0 +1,52 @@
+{
+  "name": "sekai-desktop-pet",
+  "version": "1.0.0",
+  "description": "桌面Live2D桌宠应用",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build && tsc -p tsconfig.electron.json",
+    "preview": "vite preview",
+    "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "electron:build": "vite build && tsc -p tsconfig.electron.json && electron-builder",
+    "typecheck": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "pixi.js": "^8.6.6",
+    "untitled-pixi-live2d-engine": "^1.2.0",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "concurrently": "^9.1.2",
+    "electron": "^33.3.1",
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.7",
+    "vue-tsc": "^2.2.0",
+    "wait-on": "^8.0.3"
+  },
+  "build": {
+    "appId": "com.sekai.desktop-pet",
+    "productName": "SEKAI Desktop Pet",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/icon.png"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "public/icon.png"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "public/icon.png"
+    }
+  }
+}
