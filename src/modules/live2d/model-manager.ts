@@ -1,9 +1,12 @@
-import type { AppSettings } from '@/types'
 import { settings } from '@/modules/settings'
 
 function resolveModelPath(raw: string): string {
   if (raw.startsWith('builtin:///')) return raw
-  if (raw.startsWith('model:///')) return raw.replace('model:///', 'builtin:///')
+  if (raw.startsWith('model:///')) return raw
+  if (/^[a-zA-Z]:[\\/]/.test(raw)) {
+    const normalized = raw.replace(/\\/g, '/')
+    return `model:///${normalized}`
+  }
   return `builtin:///${raw.replace(/^\//, '')}`
 }
 
@@ -13,7 +16,74 @@ async function loadModelSettingsObject(modelPath: string) {
   if (!response.ok) throw new Error(`Failed to load model settings: ${response.status}`)
   const json = await response.json()
   json.url = resolved
+  await ensureSharedMotions(json)
+  fixupMotionPaths(json)
   return json
+}
+
+let sharedMotionListCache: string[] | null = null
+async function loadSharedMotionList(): Promise<string[]> {
+  if (sharedMotionListCache) return sharedMotionListCache
+  try {
+    const res = await fetch('builtin:///motions/BuildMotionData.json')
+    if (!res.ok) throw new Error('shared BuildMotionData not found')
+    const data = await res.json()
+    const all: string[] = []
+    for (const key of Object.keys(data || {})) {
+      const arr = data[key]
+      if (Array.isArray(arr)) all.push(...arr)
+    }
+    sharedMotionListCache = all
+    console.log(`[Live2D] Loaded shared motion list: ${all.length}`)
+    return all
+  } catch (e) {
+    console.warn('[Live2D] Failed to load shared motion list:', e)
+    sharedMotionListCache = []
+    return []
+  }
+}
+
+async function ensureSharedMotions(json: any) {
+  if (!json) return
+  if (!json.FileReferences) json.FileReferences = {}
+  const refs = json.FileReferences.Motions
+  if (refs && typeof refs === 'object' && Object.keys(refs).length > 0) return
+  const list = await loadSharedMotionList()
+  if (list.length === 0) return
+  const built: Record<string, Array<{ FadeInTime: number; FadeOutTime: number; File: string }>> = {}
+  for (const name of list) {
+    built[name] = [{
+      FadeInTime: 0.5,
+      FadeOutTime: 0.5,
+      File: `builtin:///motions/${name}.motion3.json`,
+    }]
+  }
+  json.FileReferences.Motions = built
+  console.log(`[Live2D] Injected ${list.length} motions from shared library (fallback)`)
+}
+
+function fixupMotionPaths(json: any) {
+  try {
+    const refs = json?.FileReferences?.Motions
+    if (!refs || typeof refs !== 'object') return
+    let count = 0
+    for (const group of Object.keys(refs)) {
+      const entries = refs[group]
+      if (!Array.isArray(entries)) continue
+      for (const entry of entries) {
+        if (!entry || typeof entry.File !== 'string') continue
+        const file = entry.File
+        if (file.startsWith('builtin:///') || file.startsWith('motions/')) continue
+        const baseName = file.split(/[\\/]/).pop() || file
+        const fileName = baseName.endsWith('.motion3.json') ? baseName : `${baseName}.motion3.json`
+        entry.File = `builtin:///motions/${fileName}`
+        count++
+      }
+    }
+    if (count > 0) console.log(`[Live2D] Fixed up ${count} legacy motion refs to shared library`)
+  } catch (e) {
+    console.warn('[Live2D] fixupMotionPaths failed:', e)
+  }
 }
 
 async function ensureCubismRuntime() {
@@ -42,6 +112,8 @@ export class Live2DManager {
   private live2dModule: any = null
   private visibilityHandler: (() => void) | null = null
   private savedMaxFPS: number = 0
+  private loadGeneration = 0
+  private currentLoad: Promise<void> | null = null
 
   async init(container: HTMLElement): Promise<void> {
     if (this.isReady && this.app) return
@@ -129,19 +201,87 @@ export class Live2DManager {
     this.model.position.set(this.app.screen.width / 2, this.app.screen.height / 2)
   }
 
+  private async recreateApp(): Promise<void> {
+    if (!this.container || !this.live2dModule) return
+    const pixiModule = await import('pixi.js')
+
+    if (this.app) {
+      try { this.app.ticker?.stop() } catch (_) { }
+      try { this.app.stop?.() } catch (_) { }
+      try { this.app.destroy(true, { children: true, texture: false, baseTexture: false }) } catch (e) {
+        console.warn('[Live2D] app.destroy failed:', e)
+      }
+      this.app = null
+    }
+
+    while (this.container.firstChild) {
+      try { this.container.removeChild(this.container.firstChild) } catch (_) { break }
+    }
+
+    this.app = new pixiModule.Application()
+    const containerWidth = this.container.clientWidth || 400
+    const containerHeight = this.container.clientHeight || 600
+    await this.app.init({
+      backgroundAlpha: 0,
+      background: '#00000000',
+      preference: 'webgl',
+      autoDensity: false,
+      resolution: Math.min(window.devicePixelRatio || 1, 2),
+      antialias: true,
+      width: containerWidth,
+      height: containerHeight,
+    })
+    const canvas = this.app.canvas as HTMLCanvasElement
+    if (canvas) {
+      canvas.style.display = 'block'
+      this.container.appendChild(canvas)
+    }
+    const targetFPS = settings.performance.targetFPS
+    if (targetFPS > 0 && this.app.ticker) {
+      this.app.ticker.maxFPS = targetFPS
+    }
+  }
+
   async loadModel(modelPath: string): Promise<void> {
     if (!this.app) throw new Error('Live2DManager not initialized')
 
+    const gen = ++this.loadGeneration
+
+    if (this.currentLoad) {
+      console.log('[Live2D] New load requested, waiting for previous load to abort...')
+      try { await this.currentLoad } catch (_) {}
+    }
+
+    if (gen !== this.loadGeneration) {
+      console.log('[Live2D] Load cancelled (superseded while waiting)')
+      return
+    }
+
+    const promise = this._loadModelInternal(modelPath, gen)
+    this.currentLoad = promise
+    try {
+      await promise
+    } finally {
+      if (this.currentLoad === promise) this.currentLoad = null
+    }
+  }
+
+  private async _loadModelInternal(modelPath: string, gen: number): Promise<void> {
     if (this.model) {
+      console.log('[Live2D] Recreating PIXI Application to clear previous model')
       if (this.cleanupArmTracking) this.cleanupArmTracking()
-      this.app.stage.removeChild(this.model)
-      try { this.model.destroy?.() } catch (_) {}
+      this.cleanupInteraction()
       this.model = null
       this.knownMotionGroups = []
       this.failedMotions = new Set()
+      this.armParamCache.clear()
+      await this.recreateApp()
     }
 
-    const resolvedPath = resolveModelPath(modelPath)
+    if (gen !== this.loadGeneration) {
+      console.log('[Live2D] Load cancelled after recreateApp')
+      return
+    }
 
     try {
       const Live2DModel = this.live2dModule?.Live2DModel
@@ -150,11 +290,23 @@ export class Live2DManager {
       const lodValue = textureLOD === 'false' ? false : (textureLOD as any)
       const modelSettings = await loadModelSettingsObject(modelPath)
 
+      if (gen !== this.loadGeneration) {
+        console.log('[Live2D] Load cancelled after fetching settings')
+        return
+      }
+
       const configGroups = Object.keys(modelSettings?.FileReferences?.Motions || {})
       this.knownMotionGroups = configGroups
       this.failedMotions = new Set()
 
       this.model = await Live2DModel.from(modelSettings, { textureOptions: { lod: lodValue } })
+
+      if (gen !== this.loadGeneration) {
+        console.log('[Live2D] Load cancelled after model creation, discarding')
+        try { this.model.destroy?.() } catch (_) {}
+        this.model = null
+        return
+      }
 
       if (!this.model || !this.app) throw new Error('模型对象为空')
 
@@ -165,10 +317,12 @@ export class Live2DManager {
       this.lastError = null
 
       setTimeout(() => {
+        if (gen !== this.loadGeneration) return
         this.playMotionCombo([], ['smile'])
-        setTimeout(() => this.playInteractionMotion(), 200)
+        setTimeout(() => { if (gen === this.loadGeneration) this.playInteractionMotion() }, 200)
       }, 300)
     } catch (error: any) {
+      if (gen !== this.loadGeneration) return
       this.lastError = error?.message || String(error)
       console.error('[Live2D] FAIL:', this.lastError, error)
       throw error

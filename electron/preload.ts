@@ -56,4 +56,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
   modelsOpenDir: () => ipcRenderer.send('models:open-dir'),
   modelsListMotions: (modelPath: string) => ipcRenderer.invoke('models:list-motions', modelPath),
   modelsVerifyMotions: (modelPath: string, fileReferencesJson: string) => ipcRenderer.invoke('models:verify-motions', modelPath, fileReferencesJson),
+
+  downloaderFetchList: () => ipcRenderer.invoke('downloader:fetch-model-list'),
+  downloaderChooseDir: (defaultPath?: string) => ipcRenderer.invoke('downloader:choose-dir', defaultPath),
+  downloaderStart: (args: { models: any[]; saveRoot: string; concurrency?: number }) =>
+    ipcRenderer.invoke('downloader:start', args),
+  downloaderCancel: (taskId: string) => ipcRenderer.invoke('downloader:cancel', taskId),
+  downloaderCancelAll: () => ipcRenderer.invoke('downloader:cancel-all'),
+  downloaderScanLocal: (dir: string) => ipcRenderer.invoke('downloader:scan-local', dir),
+  downloaderDeleteModel: (localPath: string) => ipcRenderer.invoke('downloader:delete-model', localPath),
+  onDownloaderProgress: (callback: (data: any) => void) => {
+    const handler = (_event: any, data: any) => callback(data)
+    ipcRenderer.on('downloader:progress', handler)
+    return () => ipcRenderer.removeListener('downloader:progress', handler)
+  },
 })

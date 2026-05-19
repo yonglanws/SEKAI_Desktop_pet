@@ -19,6 +19,7 @@ const defaultSettings = {
     textureLOD: 'single-auto',
     highPrecisionMask: true,
     cubismMemoryMB: 32,
+    customModelDir: '',
   },
   ai: {
     apiEndpoint: 'https://api.openai.com/v1/chat/completions',

@@ -54,6 +54,7 @@ export interface AppSettings {
     textureLOD: 'full' | 'single-auto' | 'false'
     highPrecisionMask: boolean
     cubismMemoryMB: number
+    customModelDir: string
   }
   ai: AIConfig
   tts: TTSConfig
@@ -85,6 +86,7 @@ export const defaultSettings: AppSettings = {
     textureLOD: 'single-auto',
     highPrecisionMask: true,
     cubismMemoryMB: 32,
+    customModelDir: '',
   },
   ai: {
     apiEndpoint: 'https://api.openai.com/v1/chat/completions',
@@ -145,6 +147,28 @@ export interface ElectronAPI {
   requestReloadModel: () => Promise<{ ok: boolean; error?: string }>
   onReloadModelRequest: (callback: (requestId: string) => void) => () => void
   sendReloadModelResult: (requestId: string, result: { ok: boolean; error?: string }) => void
+
+  getCubismRuntimePath: () => Promise<string | null>
+
+  modelsGetPath: () => Promise<string>
+  modelsList: () => Promise<Array<{ name: string; path: string }>>
+  modelsListBuiltin: () => Promise<Array<{ name: string; builtinPath: string }>>
+  modelsOpenDir: () => void
+  modelsListMotions: (modelPath: string) => Promise<string[]>
+  modelsVerifyMotions: (modelPath: string, fileReferencesJson: string) => Promise<string[]>
+
+  downloaderFetchList: () => Promise<{ ok: boolean; data?: any[]; error?: string }>
+  downloaderChooseDir: (defaultPath?: string) => Promise<{ ok: boolean; path?: string }>
+  downloaderStart: (args: { models: any[]; saveRoot: string; concurrency?: number }) =>
+    Promise<{ ok: boolean; taskIds?: string[]; error?: string }>
+  downloaderCancel: (taskId: string) => Promise<{ ok: boolean }>
+  downloaderCancelAll: () => Promise<{ ok: boolean }>
+  downloaderScanLocal: (dir: string) => Promise<{
+    ok: boolean
+    data?: Array<{ name: string; modelBase: string; path: string; localPath: string }>
+  }>
+  downloaderDeleteModel: (localPath: string) => Promise<{ ok: boolean; error?: string }>
+  onDownloaderProgress: (callback: (data: any) => void) => () => void
 }
 
 declare global {

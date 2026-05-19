@@ -4,6 +4,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import * as url from 'url'
 import { initSettingsManager } from './settings-manager'
+import { initModelDownloader } from './model-downloader'
 
 let mainWindow: BrowserWindow | null = null
 let settingsWindow: BrowserWindow | null = null
@@ -98,13 +99,21 @@ function registerModelProtocol(): void {
     const relPath = host ? `${host}/${pathname}` : pathname
     const modelsDir = getBuiltinModelsDir()
     const motionsDir = getBuiltinMotionsDir()
-    let filePath = path.join(modelsDir, relPath)
 
-    if (!fs.existsSync(filePath)) {
-      filePath = path.join(motionsDir, relPath)
+    const candidates: string[] = []
+    candidates.push(path.join(modelsDir, relPath))
+    if (host === 'motions') {
+      candidates.push(path.join(motionsDir, pathname))
+    }
+    candidates.push(path.join(motionsDir, relPath))
+    candidates.push(path.join(motionsDir, pathname))
+
+    let filePath = ''
+    for (const c of candidates) {
+      if (fs.existsSync(c)) { filePath = c; break }
     }
 
-    if (!fs.existsSync(filePath)) {
+    if (!filePath) {
       console.error(`[Builtin] File not found: ${relPath}`)
       return new Response('Not Found', { status: 404 })
     }
@@ -243,6 +252,7 @@ function createSettingsWindow() {
   if (process.env.NODE_ENV === 'development') {
     const devPort = process.env.VITE_PORT || '5173'
     settingsWindow.loadURL(`http://localhost:${devPort}/#/settings`)
+    settingsWindow.webContents.openDevTools({ mode: 'detach' })
   } else {
     settingsWindow.loadFile(path.join(__dirname, '../dist/index.html'), { hash: '/settings' })
   }
@@ -494,6 +504,7 @@ function setupIPC() {
 app.whenReady().then(() => {
   registerModelProtocol()
   initSettingsManager()
+  initModelDownloader()
   setupIPC()
   createMainWindow()
   createTray()
