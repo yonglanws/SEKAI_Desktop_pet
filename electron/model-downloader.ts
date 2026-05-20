@@ -241,8 +241,10 @@ async function downloadModel(
       const motionBaseUrl = buildMotionBaseUrl(model.modelPath)
       const buildMotionData: Record<string, string[]> = await fetchJson(`${motionBaseUrl}BuildMotionData.json`)
       const motionDir = path.join(modelDir, 'motions')
-      for (const [_typ, motions] of Object.entries(buildMotionData)) {
+      const motionTypeMap: Record<string, string> = { expressions: 'facial', motions: 'motion' }
+      for (const [typ, motions] of Object.entries(buildMotionData)) {
         if (!Array.isArray(motions)) continue
+        const subDir = motionTypeMap[typ] || 'motion'
         for (const motion of motions) {
           const motionFile = `${motion}.motion3.json`
           motionRefs[motion] = [{
@@ -251,7 +253,7 @@ async function downloadModel(
             File: `motions/${motionFile}`,
           }]
           motionTasks.push({
-            url: `${motionBaseUrl}${motionFile}`,
+            url: `${motionBaseUrl}${subDir}/${motionFile}`,
             save: path.join(motionDir, motionFile),
           })
         }

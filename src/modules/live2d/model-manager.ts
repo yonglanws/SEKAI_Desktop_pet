@@ -1,4 +1,5 @@
 import { settings } from '@/modules/settings'
+import { resolveCharacterKey } from '@/data/character-prompts'
 
 function resolveModelPath(raw: string): string {
   if (raw.startsWith('builtin:///')) return raw
@@ -114,6 +115,8 @@ export class Live2DManager {
   private savedMaxFPS: number = 0
   private loadGeneration = 0
   private currentLoad: Promise<void> | null = null
+  private idleTimer: ReturnType<typeof setInterval> | null = null
+  private idleIntervalMs = 20000
 
   async init(container: HTMLElement): Promise<void> {
     if (this.isReady && this.app) return
@@ -271,6 +274,7 @@ export class Live2DManager {
       console.log('[Live2D] Recreating PIXI Application to clear previous model')
       if (this.cleanupArmTracking) this.cleanupArmTracking()
       this.cleanupInteraction()
+      this.stopIdleMotion()
       this.model = null
       this.knownMotionGroups = []
       this.failedMotions = new Set()
@@ -314,6 +318,7 @@ export class Live2DManager {
       this.app.stage.addChild(this.model)
       this.setupModelInteraction()
       if (this.setupArmTracking) this.setupArmTracking()
+      this.startIdleMotion()
       this.lastError = null
 
       setTimeout(() => {
@@ -405,6 +410,60 @@ export class Live2DManager {
       this.armTrackingHandler = null
     }
     this.armParamCache.clear()
+  }
+
+  private startIdleMotion() {
+    this.stopIdleMotion()
+    if (!settings.live2d.autoIdleMotion) return
+    this.idleTimer = setInterval(() => {
+      if (!this.model || !settings.live2d.autoIdleMotion) return
+      this.playIdleMotion()
+    }, this.idleIntervalMs)
+  }
+
+  private stopIdleMotion() {
+    if (this.idleTimer) {
+      clearInterval(this.idleTimer)
+      this.idleTimer = null
+    }
+  }
+
+  private playIdleMotion() {
+    const all = this.getAllMotionGroups().filter(g => !this.failedMotions.has(g))
+    if (all.length === 0) return
+    const charKey = this.resolveCurrentCharKey()
+    let idleBodyKeywords: string[]
+    let idleFaceKeywords: string[]
+    if (charKey === 'kanade') {
+      idleBodyKeywords = ['think', 'nod', 'tilthead', 'pose']
+      idleFaceKeywords = ['notice', 'smile']
+    } else {
+      idleBodyKeywords = ['pose', 'nod', 'tilthead', 'think', 'glad', 'stretch']
+      idleFaceKeywords = ['smile', 'wink', 'happy', 'notice']
+    }
+    const bodyGroup = this.pickOne(idleBodyKeywords, all)
+    const faceGroup = this.pickOne(idleFaceKeywords, all)
+    const motions: Array<{ group: string; index: number }> = []
+    if (bodyGroup) motions.push({ group: bodyGroup, index: 0 })
+    if (faceGroup && faceGroup !== bodyGroup) motions.push({ group: faceGroup, index: 0 })
+    if (motions.length === 0) {
+      const random = all[Math.floor(Math.random() * all.length)]
+      this.playMotion(random, 0)
+    } else if (motions.length === 1) {
+      this.playMotion(motions[0].group, motions[0].index)
+    } else {
+      this.playParallelMotion(motions)
+    }
+  }
+
+  private currentCharKey = ''
+
+  private resolveCurrentCharKey(): string {
+    try {
+      const key = resolveCharacterKey(settings.live2d.selectedModel)
+      this.currentCharKey = key
+      return key
+    } catch { return this.currentCharKey || '' }
   }
 
   playMotion(group: string, index: number): void {
@@ -539,6 +598,7 @@ export class Live2DManager {
   destroy(): void {
     this.cleanupVisibility()
     this.cleanupInteraction()
+    this.stopIdleMotion()
     if (this.cleanupArmTracking) this.cleanupArmTracking()
     if (this.model) { try { this.model.destroy?.() } catch (_) {}; this.model = null }
     if (this.app) { this.app.destroy(true); this.app = null }

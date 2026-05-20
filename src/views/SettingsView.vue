@@ -136,71 +136,46 @@
       </div>
 
       <!-- 模型下载 -->
-      <div v-if="activeTab === 'download'" class="main-content content-enter">
+      <div v-if="activeTab === 'download'" class="main-content content-enter download-page">
         <div class="page-header">
-          <div class="page-header-icon">
-            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          </div>
           <div class="page-header-text">
             <h1>模型下载</h1>
-            <p class="page-subtitle">浏览并下载 PJSK Live2D 模型</p>
+            <p class="page-subtitle">
+              <template v-if="modelList.length > 0">已载入 {{ modelList.length }} 个模型 · 已选 {{ selectedKeys.size }} 个</template>
+              <template v-else>浏览并下载 PJSK Live2D 模型</template>
+            </p>
+          </div>
+          <div class="page-header-actions">
+            <button class="icon-btn" @click="chooseModelDir" title="浏览保存目录">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            </button>
+            <button class="primary-btn" :disabled="loadingList" @click="fetchModelList">
+              <span v-if="loadingList" class="spin">⟳</span>
+              {{ loadingList ? '加载中...' : (modelList.length > 0 ? '刷新列表' : '获取列表') }}
+            </button>
           </div>
         </div>
 
-        <div class="setting-card">
-          <div class="card-header">
-            <div class="card-header-icon">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            </div>
-            <div class="card-title">下载配置</div>
-          </div>
-          <div class="setting-row two-col">
-            <div class="setting-field">
-              <label class="field-label">保存目录</label>
-              <div class="input-with-btn">
-                <input v-model="settings.live2d.customModelDir" type="text" placeholder="留空使用默认 userData/models" />
-                <button class="icon-btn" @click="chooseModelDir">
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                </button>
-              </div>
-            </div>
-            <div class="setting-field">
-              <label class="field-label">并发数</label>
-              <input type="number" min="1" max="16" v-model.number="downloadConcurrency" />
-            </div>
-          </div>
-          <div class="setting-row two-col">
-            <div class="setting-field">
-              <label class="field-label">关键字搜索</label>
-              <input v-model="filterKeyword" type="text" placeholder="名称/角色 模糊搜索" />
-            </div>
-            <div class="setting-field" style="display:flex;align-items:flex-end;">
-              <button class="primary-btn" :disabled="loadingList" @click="fetchModelList">
-                <span v-if="loadingList" class="spin">⟳</span>
-                {{ loadingList ? '加载中...' : (modelList.length > 0 ? '刷新列表' : '获取列表') }}
-              </button>
-            </div>
-          </div>
-          <div v-if="listError" class="banner error">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            {{ listError }}
-          </div>
-          <div v-else-if="modelList.length > 0" class="banner success">
-            <span>已载入 {{ modelList.length }} 个模型 · 已选 {{ selectedKeys.size }} 个</span>
-            <div class="banner-actions">
-              <button v-if="selectedKeys.size > 0" class="mini-btn" @click="clearSelection">清空</button>
-              <button class="primary-btn small" :disabled="downloading || selectedKeys.size === 0" @click="startDownload">
-                {{ downloading ? '下载中...' : `下载 ${selectedKeys.size}` }}
-              </button>
-              <button v-if="downloading" class="mini-btn danger" @click="cancelAllDownloads">取消</button>
-            </div>
+        <div v-if="listError" class="banner error">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          {{ listError }}
+        </div>
+
+        <div v-else-if="modelList.length > 0" class="banner success">
+          <span>已载入 {{ modelList.length }} 个模型 · 已选 {{ selectedKeys.size }} 个</span>
+          <div class="banner-actions">
+            <button v-if="selectedKeys.size > 0" class="mini-btn" @click="clearSelection">清空</button>
+            <button class="primary-btn small" :disabled="downloading || selectedKeys.size === 0" @click="startDownload">
+              {{ downloading ? '下载中...' : `下载 ${selectedKeys.size}` }}
+            </button>
+            <button v-if="downloading" class="mini-btn danger" @click="cancelAllDownloads">取消</button>
           </div>
         </div>
 
-        <div v-if="downloadTasks.length > 0" class="setting-card">
-          <div class="card-title-bar">
-            <span class="card-title">下载进度</span>
-            <div class="card-actions">
+        <div v-if="downloadTasks.length > 0" class="download-progress-section">
+          <div class="section-header">
+            <span class="section-title">下载进度</span>
+            <div class="section-actions">
               <button class="mini-btn" @click="clearFinishedTasks" :disabled="!hasFinishedTasks">清除完成</button>
               <button class="mini-btn" @click="tasksCollapsed = !tasksCollapsed">{{ tasksCollapsed ? '展开' : '折叠' }}</button>
             </div>
@@ -243,10 +218,14 @@
           </div>
         </div>
 
-        <div v-if="availableGroups.length > 0" class="setting-card">
-          <div class="card-title-bar">
-            <span class="card-title">浏览模型</span>
-            <div class="card-actions">
+        <div v-if="availableGroups.length > 0" class="download-browse-section">
+          <div class="section-header">
+            <span class="section-title">浏览模型</span>
+            <div class="section-actions">
+              <div class="search-field">
+                <input v-model="filterKeyword" type="text" placeholder="搜索模型..." />
+                <button v-if="filterKeyword" class="mini-btn" @click="filterKeyword = ''">清除</button>
+              </div>
               <button class="mini-btn" @click="expandAllChars">全部展开</button>
               <button class="mini-btn" @click="collapseAllChars">全部折叠</button>
             </div>
@@ -319,9 +298,9 @@
           </div>
         </div>
 
-        <div v-if="filterKeyword.trim() && filteredList.length > 0" class="setting-card">
-          <div class="card-title-bar">
-            <span class="card-title">搜索结果（{{ filteredList.length }} 个）</span>
+        <div v-if="filterKeyword.trim() && filteredList.length > 0" class="download-search-section">
+          <div class="section-header">
+            <span class="section-title">搜索结果（{{ filteredList.length }} 个）</span>
             <button class="mini-btn" @click="filterKeyword = ''">清除</button>
           </div>
           <div class="model-grid">
@@ -336,9 +315,9 @@
           </div>
         </div>
 
-        <div v-if="!loadingList && modelList.length === 0 && !listError" class="setting-card empty-state">
+        <div v-if="!loadingList && modelList.length === 0 && !listError" class="empty-state">
           <div class="empty-icon">
-            <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           </div>
           <div class="empty-title">模型列表为空</div>
           <div class="empty-desc">点击「获取列表」加载可用模型</div>
@@ -392,7 +371,7 @@
           <div class="setting-row">
             <div class="setting-field">
               <label class="field-label">系统提示词</label>
-              <textarea v-model="settings.ai.systemPrompt" rows="4" placeholder="你是一个可爱的桌宠角色..." />
+              <textarea v-model="settings.ai.systemPrompt" rows="4" placeholder="你是游戏世界计划的{name}，请以此人物的语气回答用户的问题。" />
             </div>
           </div>
           <div class="setting-row two-col">
@@ -2037,6 +2016,61 @@ onUnmounted(() => { unsubProgress?.() })
 }
 .detail-name { font-size: var(--font-size-base); font-weight: 700; color: var(--text-primary); }
 .detail-group { font-size: var(--font-size-xs); color: var(--text-muted); margin-top: 2px; }
+
+/* ===== 模型下载独立页面 ===== */
+.download-page .page-header { border-bottom: none; margin-bottom: 16px; padding-bottom: 0; }
+.download-page .page-header-text h1 { font-size: 22px; }
+
+.download-progress-section,
+.download-browse-section,
+.download-search-section {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.section-title {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.search-field input {
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-size: var(--font-size-xs);
+  width: 160px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.search-field input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2.5px var(--accent-dim);
+  outline: none;
+}
+.search-field input::placeholder { color: var(--text-muted); }
 
 /* ===== 测试结果 ===== */
 .test-result { margin-left: 12px; font-size: var(--font-size-sm); font-weight: 500; }

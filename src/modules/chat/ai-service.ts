@@ -1,5 +1,7 @@
 import type { AIConfig } from '@/types'
 import type { TTSConfig } from '@/types'
+import { settings } from '@/modules/settings'
+import { resolveCharacterKey, getCharacterPrompt } from '@/data/character-prompts'
 import { messageStore } from './message-store'
 
 function normalizeEndpoint(url: string): string {
@@ -52,7 +54,14 @@ export class AIService {
     }
 
     try {
-      const systemContent = config.systemPrompt + MOTION_INSTRUCTION
+      const charKey = resolveCharacterKey(settings.live2d.selectedModel)
+      const charPrompt = charKey ? getCharacterPrompt(charKey) : undefined
+      const charName = charPrompt?.name || '桌宠'
+      let systemPrompt = config.systemPrompt.replace(/\{name\}/g, charName)
+      if (charPrompt && !config.systemPrompt.includes(charPrompt.prompt)) {
+        systemPrompt = charPrompt.prompt + '\n\n' + systemPrompt
+      }
+      const systemContent = systemPrompt + MOTION_INSTRUCTION
       const messages = [
         { role: 'system', content: systemContent },
         ...messageStore.getHistoryForAI(),
