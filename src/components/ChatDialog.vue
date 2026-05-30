@@ -142,7 +142,7 @@ async function handleSend() {
     live2dManager.playInteractionMotion()
   } catch (_) { }
 
-  await aiService.sendMessage(text, settings.ai, settings.tts)
+  await aiService.sendMessage(text, settings.ai)
 }
 
 function autoResize() {

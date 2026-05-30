@@ -1,10 +1,14 @@
 <template>
-  <div class="main-view">
+  <div class="main-view" ref="mainView">
     <div class="live2d-area">
       <Live2DCanvas ref="live2dRef" />
     </div>
 
-    <div class="chat-panel" :class="{ collapsed: isChatCollapsed }">
+    <div
+      class="chat-panel"
+      :class="{ collapsed: isChatCollapsed }"
+      :style="chatPanelStyle"
+    >
       <ChatDialog
         :is-top="isTop"
         @collapsed="isChatCollapsed = $event"
@@ -16,17 +20,47 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import Live2DCanvas from '@/components/Live2DCanvas.vue'
 import ChatDialog from '@/components/ChatDialog.vue'
 import { settings, updateSettings } from '@/modules/settings'
+import { live2dManager } from '@/modules/live2d'
 
 const isChatCollapsed = ref(true)
 const isTop = ref(false)
 const live2dRef = ref<InstanceType<typeof Live2DCanvas>>()
+const mainView = ref<HTMLElement>()
+const modelBottomY = ref(0)
 
 let unsubSettings: (() => void) | null = null
 let unsubReload: (() => void) | null = null
+let bottomRafId = 0
+
+const chatPanelStyle = computed(() => {
+  if (!isChatCollapsed.value) return {}
+  const viewH = mainView.value?.clientHeight || window.innerHeight
+  const bottomPx = viewH - modelBottomY.value - 60
+  const clamped = Math.max(8, Math.min(bottomPx, viewH - 62))
+  return { bottom: `${clamped}px` }
+})
+
+function updateModelBottom() {
+  modelBottomY.value = live2dManager.getModelBottomY()
+  if (isChatCollapsed.value) {
+    bottomRafId = requestAnimationFrame(updateModelBottom)
+  }
+}
+
+watch(isChatCollapsed, (collapsed) => {
+  if (collapsed) {
+    if (!bottomRafId) updateModelBottom()
+  } else {
+    if (bottomRafId) {
+      cancelAnimationFrame(bottomRafId)
+      bottomRafId = 0
+    }
+  }
+})
 
 onMounted(async () => {
   const api = window.electronAPI
@@ -49,11 +83,14 @@ onMounted(async () => {
       api.sendReloadModelResult(requestId, { ok: false, error: e?.message || String(e) })
     })
   })
+
+  setTimeout(() => updateModelBottom(), 500)
 })
 
 onUnmounted(() => {
   unsubSettings?.()
   unsubReload?.()
+  if (bottomRafId) cancelAnimationFrame(bottomRafId)
 })
 
 function openSettings() {
@@ -79,7 +116,7 @@ function toggleWindowTop() {
   top: 0;
   left: 0;
   right: 0;
-  bottom: 70px;
+  bottom: 0;
   background: transparent;
   display: flex;
   align-items: center;
@@ -97,8 +134,8 @@ function toggleWindowTop() {
   right: 10px;
   bottom: 8px;
   background: var(--panel-bg);
-  backdrop-filter: blur(24px) saturate(1.5);
-  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  backdrop-filter: blur(72px) saturate(1.5);
+  -webkit-backdrop-filter: blur(72px) saturate(1.5);
   border-radius: 20px;
   border: 1px solid var(--panel-border);
   box-shadow: var(--panel-shadow);
@@ -107,16 +144,19 @@ function toggleWindowTop() {
   overflow: hidden;
   z-index: 20;
   transition:
+    bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1),
     max-height 0.45s cubic-bezier(0.4, 0, 0.2, 1),
     border-radius 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-    backdrop-filter 0.4s ease;
+    backdrop-filter 0.4s ease,
+    background 0.4s ease;
   max-height: 360px;
 }
 
 .chat-panel.collapsed {
   max-height: 62px;
   border-radius: 24px;
-  backdrop-filter: blur(14px) saturate(1.3);
-  -webkit-backdrop-filter: blur(14px) saturate(1.3);
+  background: var(--panel-bg-solid);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 </style>

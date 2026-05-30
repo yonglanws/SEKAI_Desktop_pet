@@ -595,6 +595,22 @@ export class Live2DManager {
     this.fitModelToScreen()
   }
 
+  getModelBottomY(): number {
+    if (!this.model || !this.app || !this.container) return 0
+    try {
+      const bounds = this.model.getBounds()
+      if (bounds) {
+        const canvasRect = this.container.getBoundingClientRect()
+        const ratio = canvasRect.height / this.app.screen.height
+        return canvasRect.top + (bounds.y + bounds.height) * ratio
+      }
+    } catch (_) {}
+    const canvasRect = this.container.getBoundingClientRect()
+    const bottomInCanvas = this.model.position.y + this.model.height / 2 
+    const ratio = canvasRect.height / this.app.screen.height
+    return canvasRect.top + bottomInCanvas * ratio
+  }
+
   destroy(): void {
     this.cleanupVisibility()
     this.cleanupInteraction()

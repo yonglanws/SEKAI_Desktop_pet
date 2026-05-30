@@ -1,5 +1,4 @@
 import type { AIConfig } from '@/types'
-import type { TTSConfig } from '@/types'
 import { settings } from '@/modules/settings'
 import { resolveCharacterKey, getCharacterPrompt } from '@/data/character-prompts'
 import { messageStore } from './message-store'
@@ -33,7 +32,7 @@ const MOTION_INSTRUCTION = `\n\n你是一个性格开朗活泼的桌宠！每次
 export class AIService {
   private abortController: AbortController | null = null
 
-  async sendMessage(content: string, config: AIConfig, ttsConfig?: TTSConfig): Promise<string> {
+  async sendMessage(content: string, config: AIConfig): Promise<string> {
     messageStore.addMessage('user', content)
     messageStore.setLoading(true)
 
@@ -133,19 +132,6 @@ export class AIService {
       } catch (_) {}
 
       messageStore.finalizeStreamingMessage(cleanReply || rawReply)
-
-      if (ttsConfig?.enabled && cleanReply) {
-        try {
-          const { ttsService } = await import('../tts')
-          const audioUrl = await ttsService.synthesize(cleanReply, ttsConfig)
-          if (audioUrl) {
-            const { live2dManager } = await import('../live2d')
-            live2dManager.speak(audioUrl)
-          }
-        } catch (ttsErr) {
-          console.warn('[AI] TTS failed:', ttsErr)
-        }
-      }
 
       return cleanReply || rawReply
     } catch (error: any) {

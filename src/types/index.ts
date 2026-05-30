@@ -21,24 +21,6 @@ export interface Live2DModelConfig {
   description: string
 }
 
-export interface TTSConfig {
-  enabled: boolean
-  apiEndpoint: string
-  gptWeightsPath: string
-  sovitsWeightsPath: string
-  textLang: string
-  refAudioPath: string
-  promptText: string
-  promptLang: string
-  topK: number
-  topP: number
-  temperature: number
-  speedFactor: number
-  textSplitMethod: string
-  mediaType: string
-  streamingMode: number
-}
-
 export interface AppSettings {
   theme: 'light' | 'dark' | 'auto'
   fontSize: number
@@ -57,7 +39,6 @@ export interface AppSettings {
     customModelDir: string
   }
   ai: AIConfig
-  tts: TTSConfig
   interaction: {
     hoverFeedback: boolean
     clickResponse: boolean
@@ -95,23 +76,6 @@ export const defaultSettings: AppSettings = {
     systemPrompt: '你是游戏世界计划的{name}，请以此人物的语气回答用户的问题。',
     temperature: 0.7,
     maxTokens: 512,
-  },
-  tts: {
-    enabled: false,
-    apiEndpoint: 'http://127.0.0.1:9880',
-    gptWeightsPath: '',
-    sovitsWeightsPath: '',
-    textLang: 'zh',
-    refAudioPath: '',
-    promptText: '',
-    promptLang: 'zh',
-    topK: 5,
-    topP: 1,
-    temperature: 1,
-    speedFactor: 1.0,
-    textSplitMethod: 'cut5',
-    mediaType: 'wav',
-    streamingMode: 0,
   },
   interaction: {
     hoverFeedback: true,

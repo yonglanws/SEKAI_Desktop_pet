@@ -387,152 +387,6 @@
         </div>
       </div>
 
-      <!-- 语音 -->
-      <div v-if="activeTab === 'tts'" class="main-content content-enter">
-        <div class="page-header">
-          <div class="page-header-icon">
-            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-          </div>
-          <div class="page-header-text">
-            <h1>语音合成</h1>
-            <p class="page-subtitle">配置 GPT-SoVITS 语音合成参数</p>
-          </div>
-        </div>
-        <div class="setting-card">
-          <div class="card-header">
-            <div class="card-header-icon">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
-            </div>
-            <div class="card-title">GPT-SoVITS</div>
-          </div>
-          <div class="setting-row">
-            <label class="toggle">
-              <input type="checkbox" v-model="settings.tts.enabled" />
-              <span class="toggle-track"></span>
-              <span class="toggle-label">启用语音合成</span>
-            </label>
-          </div>
-          <div class="setting-row">
-            <div class="setting-field">
-              <label class="field-label">API 端点</label>
-              <input v-model="settings.tts.apiEndpoint" type="text" placeholder="http://127.0.0.1:9880" />
-            </div>
-          </div>
-          <div class="setting-row">
-            <button class="primary-btn" :disabled="ttsTesting" @click="testTTSConnection">
-              {{ ttsTesting ? '测试中...' : '测试连接' }}
-            </button>
-            <span v-if="ttsTestResult" :class="['test-result', ttsTestResult.ok ? 'success' : 'error']">{{ ttsTestResult.message }}</span>
-          </div>
-        </div>
-        <div class="setting-card">
-          <div class="card-header">
-            <div class="card-header-icon">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-            </div>
-            <div class="card-title">模型权重</div>
-          </div>
-          <div class="setting-row two-col">
-            <div class="setting-field">
-              <label class="field-label">GPT 模型路径</label>
-              <input v-model="settings.tts.gptWeightsPath" type="text" placeholder="...ckpt" />
-            </div>
-            <div class="setting-field">
-              <label class="field-label">SoVITS 模型路径</label>
-              <input v-model="settings.tts.sovitsWeightsPath" type="text" placeholder="s2G488k.pth" />
-            </div>
-          </div>
-          <div class="setting-row">
-            <button class="primary-btn" :disabled="modelSwitching" @click="switchTTSModel">
-              {{ modelSwitching ? '切换中...' : '切换模型' }}
-            </button>
-            <span v-if="modelSwitchResult" :class="['test-result', modelSwitchResult.ok ? 'success' : 'error']">{{ modelSwitchResult.message }}</span>
-          </div>
-        </div>
-        <div class="setting-card">
-          <div class="card-header">
-            <div class="card-header-icon">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-            </div>
-            <div class="card-title">参考音频</div>
-          </div>
-          <div class="setting-row two-col">
-            <div class="setting-field">
-              <label class="field-label">参考音频路径</label>
-              <input v-model="settings.tts.refAudioPath" type="text" placeholder="服务端路径" />
-            </div>
-            <div class="setting-field">
-              <label class="field-label">参考音频文本</label>
-              <input v-model="settings.tts.promptText" type="text" placeholder="对应文本内容" />
-            </div>
-          </div>
-          <div class="setting-row two-col">
-            <div class="setting-field">
-              <label class="field-label">合成文本语言</label>
-              <select v-model="settings.tts.textLang">
-                <option value="zh">中文</option><option value="en">英文</option><option value="ja">日文</option><option value="ko">韩文</option><option value="yue">粤语</option>
-              </select>
-            </div>
-            <div class="setting-field">
-              <label class="field-label">参考音频语言</label>
-              <select v-model="settings.tts.promptLang">
-                <option value="zh">中文</option><option value="en">英文</option><option value="ja">日文</option><option value="ko">韩文</option><option value="yue">粤语</option>
-              </select>
-            </div>
-          </div>
-        </div>
-        <div class="setting-card">
-          <div class="card-header">
-            <div class="card-header-icon">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            </div>
-            <div class="card-title">高级参数</div>
-          </div>
-          <div class="setting-row two-col">
-            <div class="setting-field">
-              <label class="field-label">Top K</label>
-              <input type="number" min="1" max="100" v-model.number="settings.tts.topK" />
-            </div>
-            <div class="setting-field">
-              <label class="field-label">Top P <span class="field-value">{{ settings.tts.topP.toFixed(2) }}</span></label>
-              <input type="range" min="0" max="1" step="0.05" v-model.number="settings.tts.topP" />
-            </div>
-          </div>
-          <div class="setting-row two-col">
-            <div class="setting-field">
-              <label class="field-label">Temperature <span class="field-value">{{ settings.tts.temperature.toFixed(2) }}</span></label>
-              <input type="range" min="0.1" max="2" step="0.05" v-model.number="settings.tts.temperature" />
-            </div>
-            <div class="setting-field">
-              <label class="field-label">语速 <span class="field-value">{{ settings.tts.speedFactor.toFixed(2) }}x</span></label>
-              <input type="range" min="0.5" max="2" step="0.05" v-model.number="settings.tts.speedFactor" />
-            </div>
-          </div>
-          <div class="setting-row two-col">
-            <div class="setting-field">
-              <label class="field-label">文本分割方式</label>
-              <select v-model="settings.tts.textSplitMethod">
-                <option value="cut0">不分割</option><option value="cut1">四句一切</option><option value="cut2">50字一切</option><option value="cut3">按中文句号切</option><option value="cut4">按英文句号切</option><option value="cut5">综合切分（推荐）</option>
-              </select>
-            </div>
-            <div class="setting-field">
-              <label class="field-label">输出格式</label>
-              <select v-model="settings.tts.mediaType">
-                <option value="wav">WAV</option><option value="ogg">OGG</option><option value="aac">AAC</option>
-              </select>
-            </div>
-          </div>
-          <div class="setting-row">
-            <div class="setting-field">
-              <label class="field-label">流式模式</label>
-              <select v-model.number="settings.tts.streamingMode">
-                <option :value="0">关闭</option><option :value="1">最佳质量（最慢）</option><option :value="2">中等质量</option><option :value="3">较低质量（最快）</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- 外观 -->
       <div v-if="activeTab === 'appearance'" class="main-content content-enter">
         <div class="page-header">
@@ -665,7 +519,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { settings, resetSettings, exportSettings, importSettings } from '@/modules/settings'
-import { ttsService } from '@/modules/tts'
 
 interface ModelEntry {
   modelBase: string
@@ -695,8 +548,6 @@ interface LocalModel {
 }
 
 const activeTab = ref('live2d')
-const ttsTesting = ref(false)
-const ttsTestResult = ref<{ ok: boolean; message: string } | null>(null)
 const modelSwitching = ref(false)
 const modelSwitchResult = ref<{ ok: boolean; message: string } | null>(null)
 
@@ -725,7 +576,6 @@ const tabs = [
   { id: 'live2d', label: '已下载模型', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="4"/><path d="M5 20c0-4 3-7 7-7s7 3 7 7"/></svg>' },
   { id: 'download', label: '模型下载', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' },
   { id: 'ai', label: 'AI 对话', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>' },
-  { id: 'tts', label: '语音', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>' },
   { id: 'appearance', label: '外观', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>' },
   { id: 'interaction', label: '交互', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' },
   { id: 'performance', label: '性能', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>' },
@@ -751,30 +601,6 @@ async function saveAndApply() {
   } catch (e) {
     console.error('[Settings] Save failed:', e)
     alert('保存失败，请重试')
-  }
-}
-
-async function testTTSConnection() {
-  ttsTesting.value = true
-  ttsTestResult.value = null
-  try {
-    ttsTestResult.value = await ttsService.testConnection(settings.tts)
-  } catch (e: any) {
-    ttsTestResult.value = { ok: false, message: e.message || '未知错误' }
-  } finally {
-    ttsTesting.value = false
-  }
-}
-
-async function switchTTSModel() {
-  modelSwitching.value = true
-  modelSwitchResult.value = null
-  try {
-    modelSwitchResult.value = await ttsService.switchModel(settings.tts)
-  } catch (e: any) {
-    modelSwitchResult.value = { ok: false, message: e.message || '未知错误' }
-  } finally {
-    modelSwitching.value = false
   }
 }
 
